@@ -12,8 +12,11 @@ ifneq ($(CXX),FCC)
 FLAGS	:= -Wall -Wno-unused-but-set-variable 
 endif
 FLAGS	+= -O2 -MD 
-INCS	+= -I$(INC_PATH) -I../include
-LDFLAGS += -L$(LIB_PATH) -L../lib
+# INC_PATH and LIB_PATH may contain multiple directories separated by ':'
+INC_DIRS := $(subst :, ,$(INC_PATH))
+LIB_DIRS := $(subst :, ,$(LIB_PATH))
+INCS	+= $(addprefix -I,$(INC_DIRS)) -I../include
+LDFLAGS += $(addprefix -L,$(LIB_DIRS)) -L../lib
 
 # platform -----------------------------------
 UNAME_S := $(shell uname -s)
@@ -108,7 +111,7 @@ SPARSE=yes
 endif
 # testing of sparse routines requires BeBOP Sparse Matrix Converter
 ifeq ($(SPARSE),yes)
-ifeq ($(wildcard $(INC_PATH)/bebop/smc/sparse_matrix.h),)
+ifeq ($(wildcard $(addsuffix /bebop/smc/sparse_matrix.h,$(INC_DIRS))),)
 $(warning BeBOP Sparse Matrix Converter is not found in $(INC_PATH): testing of CSRMV and CG is skipped)
 SPARSE = no
 CSRMV = no
@@ -141,7 +144,13 @@ LIBS	+= $(BSTATIC) -lmpblas__Float128_opt
 endif
 
 ifeq ($(SPARSE),yes)
+# static linkage on macOS: link the archives directly (-l prefers .dylib, and -Bstatic is not supported)
+BEBOP_ARCHIVES := $(firstword $(wildcard $(addsuffix /libsparse_matrix_converter.a,$(LIB_DIRS)))) $(firstword $(wildcard $(addsuffix /libbebop_util.a,$(LIB_DIRS))))
+ifeq ($(LINKAGE)$(UNAME_S)$(words $(BEBOP_ARCHIVES)),staticDarwin2)
+LIBS    += $(BEBOP_ARCHIVES)
+else
 LIBS    += $(BSTATIC) -lsparse_matrix_converter -lbebop_util
+endif
 endif
 #=========================================
 
@@ -158,7 +167,11 @@ LIBS	+= $(BDYNAMIC)
 ifeq ($(HAVE_QUADMATH),yes)
 LIBS	+= -lquadmath
 endif
-LIBS	+= -lstdc++ -lm -lc -ldl
+# the g++ driver links libstdc++ itself; the macOS linker warns about the duplicate
+ifneq ($(UNAME_S),Darwin)
+LIBS	+= -lstdc++
+endif
+LIBS	+= -lm -lc -ldl
 
 # compiler -----------------------------------
 ifeq ($(CXX),icpc)

@@ -6,7 +6,8 @@ LIB		:= ../../lib/libozblas.a
 ifneq ($(CXX),FCC)
 FLAGS	:= -Wall -Wno-maybe-uninitialized 
 endif
-FLAGS   += -MD -O3 -fPIC -I$(INC_PATH) 
+# INC_PATH may contain multiple directories separated by ':'
+FLAGS   += -MD -O3 -fPIC $(addprefix -I,$(subst :, ,$(INC_PATH))) 
 
 #--------------------
 # ARCH and COMPILER

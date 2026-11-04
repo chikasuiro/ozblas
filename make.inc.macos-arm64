@@ -14,6 +14,7 @@ CUDA_PATH	= /usr/local/cuda
 LIB_PATH	= /opt/homebrew/opt/openblas/lib
 INC_PATH	= /opt/homebrew/opt/openblas/include
 # -> installation path of external libraries
+# -> multiple directories can be specified separated by ':' (e.g., INC_PATH = /opt/homebrew/opt/openblas/include:$(HOME)/local/include)
 
 #--- Compiler --------------------------------
 CXX = g++-16

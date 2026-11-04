@@ -4,7 +4,9 @@ include ../../make.inc
 NVCC	= $(CUDA_PATH)/bin/nvcc 
 AR		= ar
 LIB		:= ../../lib/libcuozblas.a
-FLAGS   := -Wall -MD -O3 -Wno-maybe-uninitialized -I$(INC_PATH) 
+# INC_PATH may contain multiple directories separated by ':'
+INCS    := $(addprefix -I,$(subst :, ,$(INC_PATH)))
+FLAGS   := -Wall -MD -O3 -Wno-maybe-uninitialized $(INCS) 
 NVCCFLAGS   := -O3 --expt-relaxed-constexpr #--ptxas-options=-v
 #--ptxas-options=-v #--compiler-options='-finstrument-functions' -g
 
@@ -97,9 +99,9 @@ blas: $(ALLOBJ)
 	$(AR) rv $(LIB) $(ALLOBJ) 
 
 %.o: %.cu
-	$(NVCC) $(NVCCFLAGS) -o $@ -c $< -I$(INC_PATH)
+	$(NVCC) $(NVCCFLAGS) -o $@ -c $< $(INCS)
 cuozblas.o: cuozblas.cpp
-	$(CXX) $(FLAGS) -o $@ -c $< -I$(CUDA_PATH)/include -I$(INC_PATH)
+	$(CXX) $(FLAGS) -o $@ -c $< -I$(CUDA_PATH)/include $(INCS)
 
 clean :
 	$(RM) *.o *.d
