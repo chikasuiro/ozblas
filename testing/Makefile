@@ -15,6 +15,21 @@ FLAGS	+= -O2 -MD
 INCS	+= -I$(INC_PATH) -I../include
 LDFLAGS += -L$(LIB_PATH) -L../lib
 
+# platform -----------------------------------
+UNAME_S := $(shell uname -s)
+# binary128 is long double if LDBL_MANT_DIG == 113 (e.g., Linux on AArch64),
+# otherwise __float128 with libquadmath (e.g., x86_64, macOS on Apple Silicon)
+# -> see src/cpu/ozblas_common.h
+# libquadmath is linked if it can be linked (it may not exist when binary128 is long double)
+HAVE_QUADMATH := $(shell echo 'int main(){}' | $(CXX) -x c++ - -lquadmath -o /dev/null >/dev/null 2>&1 && echo yes)
+# static linkage: the macOS linker does not support -Bstatic/-Bdynamic (shared libraries are used)
+ifeq ($(LINKAGE),static)
+ifneq ($(UNAME_S),Darwin)
+BSTATIC  = -Wl,-Bstatic
+BDYNAMIC = -Wl,-Bdynamic
+endif
+endif
+
 # -------------------------------------------
 ifeq ($(CUDA),yes)
 OBJS	+= $(CUOZBLAS_OBJS) 
@@ -50,11 +65,7 @@ endif
 endif
 ifeq ($(CPU_BLAS),OpenBLAS)
 FLAGS	+= -DOpenBLAS
-ifeq ($(LINKAGE),static)
-LIBS	+= -Wl,-Bstatic,-lopenblas
-else
-LIBS	+= -lopenblas
-endif
+LIBS	+= $(BSTATIC) -lopenblas
 #LIBS 	+= -lgfortran 
 endif
 ifeq ($(CPU_BLAS),SSL2)
@@ -74,8 +85,11 @@ FLAGS	+= -DARM
 ifeq ($(CXX),FCC)
 FLAGS	+= -Nclang -Kopenmp -std=c++11 #-Nfjomplib -Nclang -Kopemp -march=armv8-a+sve 
 endif
+# Fujitsu compiler or SSL2 (Fugaku) only
+ifneq ($(filter FCC,$(CXX))$(filter SSL2,$(CPU_BLAS)),)
 LDFLAGS	+= -L/opt/FJSVxtclanga/tcsds-1.2.33/lib64
 INCS	+= -I/opt/FJSVxtclanga/tcsds-1.2.33/include
+endif
 ifeq ($(POWER_API),yes)
 FLAGS	+= -DPOWER_API
 LIBS	+= -Wl,-Bdynamic,-lpwr
@@ -91,6 +105,15 @@ SPARSE=yes
 endif
 ifeq ($(CG),yes)
 SPARSE=yes
+endif
+# testing of sparse routines requires BeBOP Sparse Matrix Converter
+ifeq ($(SPARSE),yes)
+ifeq ($(wildcard $(INC_PATH)/bebop/smc/sparse_matrix.h),)
+$(warning BeBOP Sparse Matrix Converter is not found in $(INC_PATH): testing of CSRMV and CG is skipped)
+SPARSE = no
+CSRMV = no
+CG = no
+endif
 endif
 ifeq ($(MPLAPACK),no)
 PREC_Q_D = no
@@ -109,50 +132,33 @@ endif
 
 ifeq ($(PREC_DD),yes)
 ifeq ($(MPLAPACK),yes)
-ifeq ($(LINKAGE),static)
-LIBS	+= -Wl,-Bstatic,-lqd,-lmpblas_dd_opt
-else
-LIBS	+= -lqd -lmpblas_dd_opt
-endif
+LIBS	+= $(BSTATIC) -lqd -lmpblas_dd_opt
 endif
 endif
 
 ifeq ($(FLOAT128),yes)
-ifeq ($(LINKAGE),static)
-LIBS	+= -Wl,-Bstatic,-lmpblas__Float128_opt
-else
-LIBS	+= -lmpblas__Float128_opt
-endif
-ifeq ($(CPU_ARCH),ARM)
-else
-endif
+LIBS	+= $(BSTATIC) -lmpblas__Float128_opt
 endif
 
 ifeq ($(SPARSE),yes)
-ifeq ($(LINKAGE),static)
-LIBS    += -Wl,-Bstatic,-lsparse_matrix_converter,-lbebop_util
-else
-LIBS    += -lsparse_matrix_converter -lbebop_util
-endif
+LIBS    += $(BSTATIC) -lsparse_matrix_converter -lbebop_util
 endif
 #=========================================
 
 #=========================================
 ifeq ($(MPLAPACK),yes)
 OBJS	+= $(MPBLAS_OBJS) 
-ifeq ($(LINKAGE),static)
-LIBS	+= -Wl,-Bstatic,-lmpblas_mpfr_opt -lmpfr
-else
-LIBS	+= -lmpblas_mpfr_opt -lmpfr
-endif
+LIBS	+= $(BSTATIC) -lmpblas_mpfr_opt -lmpfr
 LIBS	+= -lmpc -lgmp -std=c++11 -std=gnu++17
 FLAGS	+= -DMPLAPACK
 endif
 
-ifeq ($(LINKAGE),static)
-LIBS	+= -Wl,-Bdynamic,-lquadmath
+# system libraries are linked dynamically
+LIBS	+= $(BDYNAMIC)
+ifeq ($(HAVE_QUADMATH),yes)
+LIBS	+= -lquadmath
 endif
-LIBS	+= -lstdc++ -lm -lc -ldl -lquadmath
+LIBS	+= -lstdc++ -lm -lc -ldl
 
 # compiler -----------------------------------
 ifeq ($(CXX),icpc)
@@ -164,7 +170,8 @@ ifeq ($(CPU_ARCH),SKYLAKE)
 	FLAGS += -xCORE-AVX2 -mtune=skylake-avx512 
 endif
 endif
-ifeq ($(CXX),g++)
+# GCC: g++, g++-16, aarch64-linux-gnu-g++, etc.
+ifneq ($(filter g++ g++-% %-g++ %-g++-%,$(notdir $(CXX))),)
 	FLAGS += -fopenmp 
 ifeq ($(CPU_ARCH),SKYLAKE)
 	FLAGS += -march=skylake

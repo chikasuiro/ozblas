@@ -1,0 +1,7 @@
+*.d
+*.o
+testing/*
+!testing/Makefile
+!testing/*.cpp
+!testing/*.h
+!testing/*.sh

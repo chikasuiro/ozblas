@@ -1,12 +1,21 @@
 #ifndef EFT_H
 #define EFT_H
 
+#include <cmath>
+
+#if defined (__x86_64__) || defined (__i386__)
 #include <immintrin.h>
+#define OZBLAS_X86_SIMD
+#endif
 
 struct double2 {
 	double x;
 	double y;
 };
+
+// =========================================
+// Scalar
+// =========================================
 
 __inline__ void
 TwoSum
@@ -17,6 +26,74 @@ TwoSum
 	v = s - a;
 	e = (a - (s - v)) + (b - v);
 }
+
+__inline__ void
+QuickTwoSum
+	(double a, double b, double &s, double &e)
+{
+	s = a + b;
+	e = b - (s - a);
+}
+
+__inline__ void
+TwoProdFMA
+	(double a, double b, double &p, double &e)
+{
+	p = a * b;
+	e = fma (a, b, -p);
+}
+
+__inline__ void
+Dot2i
+	(const double a, const double b, double2 &c)
+{
+	double h, r, q;
+	TwoProdFMA (a, b, h, r);
+	TwoSum (c.x, h, c.x, q);
+	c.y = c.y + (q + r);
+}
+
+__inline__ double2
+QuadAdd
+	(const double2 a, const double2 b) {
+	double2 t, c;
+	TwoSum (a.x, b.x, t.x, t.y);
+	t.y = t.y + (a.y + b.y);
+	QuickTwoSum (t.x, t.y, c.x, c.y);
+	return c;
+}
+
+__inline__ void
+QuadAdd_
+	(const double ax, const double ay, const double bx, const double by, double &cx, double &cy) {
+	double tx, ty;
+	TwoSum (ax, bx, tx, ty);
+	ty = ty + (ay + by);
+	QuickTwoSum (tx, ty, cx, cy);
+}
+
+__inline__ double2
+QuadMul
+	(const double a, const double2 b) {
+	double2 t, c;
+	TwoProdFMA (a, b.x, t.x, t.y);
+	t.y = fma (a, b.y, t.y);
+	QuickTwoSum (t.x, t.y, c.x, c.y);
+	return c;
+}
+
+__inline__ double2
+QuadMul
+	(const double a, const double b) {
+	double2 c;
+	TwoProdFMA (a, b, c.x, c.y);
+	return c;
+}
+
+// =========================================
+// x86 SIMD (SSE/AVX/AVX-512)
+// =========================================
+#if defined (OZBLAS_X86_SIMD)
 
 __inline__ void
 TwoSum_avx128
@@ -49,14 +126,6 @@ TwoSum_avx512
 }
 
 __inline__ void
-QuickTwoSum
-	(double a, double b, double &s, double &e)
-{
-	s = a + b;
-	e = b - (s - a);
-}
-
-__inline__ void
 QuickTwoSum_avx128
 	(__m128d a, __m128d b, __m128d &s, __m128d &e)
 {
@@ -73,14 +142,6 @@ QuickTwoSum_avx256
 }
 
 __inline__ void
-TwoProdFMA
-	(double a, double b, double &p, double &e)
-{
-	p = a * b;
-	e = fma (a, b, -p);
-}
-
-__inline__ void
 TwoProdFMA_avx256
 	(__m256d a, __m256d b, __m256d &p, __m256d &e)
 {
@@ -94,16 +155,6 @@ TwoProdFMA_avx512
 {
 	p = _mm512_mul_pd (a, b);
 	e = _mm512_fmadd_pd (a, b, -p);
-}
-
-__inline__ void
-Dot2i
-	(const double a, const double b, double2 &c)
-{
-	double h, r, q;
-	TwoProdFMA (a, b, h, r);
-	TwoSum (c.x, h, c.x, q);
-	c.y = c.y + (q + r);
 }
 
 __inline__ void
@@ -126,25 +177,6 @@ Dot2_avx512
 	cl = _mm512_add_pd (cl, _mm512_add_pd (q, r));
 }
 
-__inline__ double2
-QuadAdd
-	(const double2 a, const double2 b) {
-	double2 t, c;
-	TwoSum (a.x, b.x, t.x, t.y);
-	t.y = t.y + (a.y + b.y);
-	QuickTwoSum (t.x, t.y, c.x, c.y);
-	return c;
-}
-
-__inline__ void
-QuadAdd_
-	(const double ax, const double ay, const double bx, const double by, double &cx, double &cy) {
-	double tx, ty;
-	TwoSum (ax, bx, tx, ty);
-	ty = ty + (ay + by);
-	QuickTwoSum (tx, ty, cx, cy);
-}
-
 __inline__ void
 QuadAdd_avx128
 	(const __m128d aHi, const __m128d aLo, const __m128d bHi, const __m128d bLo, __m128d &cHi, __m128d &cLo) {
@@ -163,22 +195,6 @@ QuadAdd_avx256
 	QuickTwoSum_avx256 (tHi, tLo, cHi, cLo);
 }
 
-__inline__ double2
-QuadMul
-	(const double a, const double2 b) {
-	double2 t, c;
-	TwoProdFMA (a, b.x, t.x, t.y);
-	t.y = fma (a, b.y, t.y);
-	QuickTwoSum (t.x, t.y, c.x, c.y);
-	return c;
-}
-
-__inline__ double2
-QuadMul
-	(const double a, const double b) {
-	double2 c;
-	TwoProdFMA (a, b, c.x, c.y);
-	return c;
-}
+#endif // OZBLAS_X86_SIMD
 
 #endif

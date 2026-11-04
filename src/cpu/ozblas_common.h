@@ -30,10 +30,20 @@
 Intel LLVM Compiler is not supported...
 #endif
 
-#if defined (ARM)
+// binary128:
+// - If long double is IEEE binary128 (e.g., Linux on AArch64 such as Fugaku),
+//   use long double and its standard math functions (bit-identical to libquadmath).
+// - Otherwise (e.g., x86_64, macOS on Apple Silicon where long double is binary64),
+//   use __float128 with libquadmath.
+#if LDBL_MANT_DIG == 113
+#define QUAD_LDBL
 #define __float128 long double
 #define FLT128_MAX LDBL_MAX
 #define FLT128_MIN LDBL_MIN
+#define fmaq fmal
+#define fabsq fabsl
+#define scalbnq scalbnl
+#define log2q log2l
 #else
 #include <quadmath.h>
 #endif

@@ -28,17 +28,20 @@ This code is an experimental alpha version. We do not guarantee the computation 
 libozblas.a:
 - G++ (Intel compiler is not supported)
 - MKL or OpenBLAS
+- binary128: long double is used if it is binary128 (e.g., Linux on AArch64), otherwise __float128 with libquadmath (e.g., x86_64, macOS on Apple Silicon with G++)
 libcuozblas.a:
 - CUDA and cuBLAS
 testing:
 - MPLAPACK (http://mplapack.sourceforge.net)
 -> For testing with MPFR and binary128
+-> MPLAPACK 2.0.x is assumed (2.3.0 or later is not supported)
 - The GNU MPFR Library (https://www.mpfr.org)
 -> MPFR is included in MPLAPACK
 -> MPFR must be built with "--enable-float128" option for binary128
 -> MPLAPACK should be built with MPFR with binary128 support
 - BeBOP Sparse Matrix Converter (http://bebop.cs.berkeley.edu/smc/)
 -> For sparse matrix handling
+-> If it is not found in INC_PATH, testing of CSRMV and CG is skipped
 
 [Build]
 After modify make.inc and Makefiles in src and testing directories, execute make in the current directory.

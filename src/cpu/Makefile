@@ -25,7 +25,8 @@ endif
 endif
 	# Warning 1: fprotect-parens MUST be used (g++ enables it in default)
 	# Warning 2: fp-model source MUST be used (disable 80-bit register)
-ifeq ($(CXX),g++)
+# GCC: g++, g++-16, aarch64-linux-gnu-g++, etc.
+ifneq ($(filter g++ g++-% %-g++ %-g++-%,$(notdir $(CXX))),)
 	FLAGS += -fopenmp 
 ifeq ($(CPU_ARCH),SKYLAKE)
 	FLAGS += -march=skylake
@@ -57,22 +58,6 @@ ifeq ($(CUBLAS),yes)
 endif
 ifeq ($(MPLAPACK),yes)
 	FLAGS += -DMPLAPACK
-endif
-
-#--------------------
-# PREC
-#--------------------
-ifeq ($(PREC_Q_D),yes)
-	PREC_Q=yes
-endif
-ifeq ($(PREC_Q_S),yes)
-	PREC_Q=yes
-endif
-ifeq ($(PREC_Q),yes)
-ifeq ($(CPU_ARCH),ARM)
-else
-	FLAGS += -lquadmath 
-endif
 endif
 
 all: blas

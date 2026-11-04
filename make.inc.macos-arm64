@@ -1,0 +1,97 @@
+##############################################
+
+#--- System ----------------------------------
+#CPU_ARCH: KNL, ICELAKE, SKYLAKE, ARM
+CPU_ARCH = ARM
+# -> If specified, compile with architecture-specific options
+
+#LINKAGE: static, dynamic
+LINKAGE = static
+# -> On macOS, shared libraries are linked even if static (the linker does not support -Bstatic)
+
+#--- PATH ------------------------------------
+CUDA_PATH	= /usr/local/cuda
+LIB_PATH	= /opt/homebrew/opt/openblas/lib
+INC_PATH	= /opt/homebrew/opt/openblas/include
+# -> installation path of external libraries
+
+#--- Compiler --------------------------------
+CXX = g++-16
+# -> Intel LLVM Compiler (icpx) is not supported
+
+# macOS: g++ is Apple clang (no libquadmath / -fopenmp) -> use Homebrew GCC instead
+ifeq ($(shell uname -s),Darwin)
+ifneq ($(shell echo __clang__ | $(CXX) -E -P -x c++ - 2>/dev/null),__clang__)
+BREW_GXX := $(shell ls /opt/homebrew/bin/g++-[0-9]* /usr/local/bin/g++-[0-9]* 2>/dev/null | sort -V | tail -1)
+ifneq ($(BREW_GXX),)
+CXX := $(BREW_GXX)
+endif
+endif
+endif
+
+#--- CPU (OzBLAS) / CUDA (cuOzBLAS) ----------
+CPU  = yes
+CUDA = no
+# CPU must be yes also for CUDA
+
+#--- BLAS (CPU) ------------------------------
+#CPU_BLAS: OpenBLAS, MKL
+#CPU_BLAS = MKL
+CPU_BLAS = OpenBLAS
+# CSRMV & CG use MKL's sparse routines if MKL, otherwise in-house implementations.
+
+#--- MPLAPACK (for testing) ------------------
+MPLAPACK = no
+# -> yes or no. 'yes' uses MPLAPACK for verifying computational result
+# -> If no, binary128 (PREC_Q_D and PREC_Q_S) cannot be used.
+# MPLAPACK does not work with SSL2 on Fugaku
+# -> MPLAPACK 2.0.x is assumed (MPLAPACK 2.3.0 or later has a different API and is not supported)
+
+#--- CUDA Compute Capability -----------------
+CC50 = no
+CC52 = no
+CC53 = no
+CC60 = no
+CC61 = no
+CC62 = no
+CC70 = no
+CC75 = no
+CC80 = no
+CC86 = no
+CC90 = yes
+# -> Tested only on GPUs with CC70, CC75, and CC86
+
+#--- Precision -------------------------------
+# PREC_X_Y: X is I/O-precision, Y is compute-precision
+# Q: FP128, D: FP64, S: FP32, H: FP16 
+PREC_Q_D = yes
+PREC_Q_S = yes
+PREC_D_D = yes
+PREC_D_S = yes
+PREC_D_H = yes
+PREC_S_S = yes
+PREC_S_H = yes
+PREC_S_D = yes
+# -> D_H and S_H: GPU only
+# -> Q_D and Q_S: CPU only
+
+#--- Routine ---------------------------------
+# level-1
+DOT = yes
+NRM2 = yes
+AXPY = yes
+
+# level-2
+GEMV = yes
+CSRMV = yes
+# -> CSRMV requires MKL on CPUs
+
+# level-3
+GEMM = yes
+
+# solver
+CG = yes
+# -> CG requires CSRMV, DOT, NRM2, and AXPY
+
+##############################################
+

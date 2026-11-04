@@ -47,6 +47,9 @@ endif
 ifeq ($(CC86),yes)
 NVCCFLAGS += -gencode arch=compute_86,code=sm_86
 endif
+ifeq ($(CC90),yes)
+NVCCFLAGS += -gencode arch=compute_90,code=sm_90
+endif
 
 all: blas
 

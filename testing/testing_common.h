@@ -8,7 +8,12 @@
 #include "testing_setting.h"
 #undef _IEEE_
 
+#if defined (OpenBLAS)
+#include <cblas.h> // defines __STDC_WANT_IEC_60559_TYPES_EXT__ with GCC 13 or higher
+#endif
+#ifndef __STDC_WANT_IEC_60559_TYPES_EXT__
 #define __STDC_WANT_IEC_60559_TYPES_EXT__
+#endif
 #include <cstdio>
 #include <cstdlib>
 #include <cmath> 
@@ -43,8 +48,13 @@ extern "C" {
 #include <cblas.h>
 #endif
 
-#if defined (ARM)
+// binary128: see src/cpu/ozblas_common.h (must be consistent with the library)
+#if LDBL_MANT_DIG == 113
+#define QUAD_LDBL
 #define __float128 long double
+#endif
+
+#if defined (ARM)
 #if defined (POWER_API) // only on Fugaku
 #include "pwr.h"
 #endif
@@ -124,8 +134,11 @@ extern "C" {
 // +++++++++++++++++++++
 #if defined (PREC_Q)
 #define FP_TYPE	__float128
-#if defined (ARM)
-#define FABS fabs
+#if defined (QUAD_LDBL)
+#define FABS fabsl
+#define powq powl
+#define isinfq std::isinf
+#define isnanq std::isnan
 #define FP_MAX LDBL_MAX
 #define FP_MIN LDBL_MIN
 #define F_PI 3.1415926535897932384626433832795029L;

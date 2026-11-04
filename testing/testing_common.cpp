@@ -528,7 +528,7 @@ void printBitsB128 (__float128 val) {
 	for (int i = 126-15; i >= 0; i--) 
 		printf ("%d", (int)((qi.i >> i) & 1));
 	printf (" : ");
-	#if defined (ARM)
+	#if defined (QUAD_LDBL)
 	printf ("%1.3Le\n", val);
 	#else
 	char buf[128];
@@ -778,7 +778,7 @@ void mublasInitMat (
 			amax = std::max (amax_local, amax);
 			amin = std::min (amin_local, amin);
 		}
-		#if defined (PREC_Q) && !defined (ARM)
+		#if defined (PREC_Q) && !defined (QUAD_LDBL)
 		char buf[128];
 		if (amax == amin) {
 			quadmath_snprintf(buf, sizeof(buf), "%.2Qf", amax); // amax == amin
@@ -994,13 +994,17 @@ void print_info1 (
 	testingHandle_t *th
 ) {
 	if (!th->nodisp) {
-		system("echo -n '# Testing info -----------------------------\n'");
-		system("echo -n '# \tDate:\t'; date");
-		system("echo -n '# \tCPU:\t'; cat /proc/cpuinfo | grep 'model name' | head -n 1");
-		system("echo -n '# \tOMP:\tOMP_NUM_THREADS = ' $OMP_NUM_THREADS");
-		system("echo ', MKL_NUM_THREADS = ' $MKL_NUM_THREADS");
-		system("echo -n '# \tOS:\t'; uname -a");
-		system("echo -n '# \tHost:\t'; hostname");
+		system("printf '# Testing info -----------------------------\n'");
+		system("printf '# \tDate:\t'; date");
+		#if defined (__APPLE__)
+		system("printf '# \tCPU:\t'; sysctl -n machdep.cpu.brand_string");
+		#else
+		system("printf '# \tCPU:\t'; cat /proc/cpuinfo | grep 'model name' | head -n 1");
+		#endif
+		system("printf '# \tOMP:\tOMP_NUM_THREADS = %s' \"$OMP_NUM_THREADS\"");
+		system("printf ', MKL_NUM_THREADS = %s\n' \"$MKL_NUM_THREADS\"");
+		system("printf '# \tOS:\t'; uname -a");
+		system("printf '# \tHost:\t'; hostname");
 		printf("# \tCompiler:\t");
 		#if defined (__INTEL_COMPILER)
 		printf("ICC %d\n", __INTEL_COMPILER);
