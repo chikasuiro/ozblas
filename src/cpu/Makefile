@@ -3,8 +3,14 @@ include ../../make.inc
 
 AR		= ar
 LIB		:= ../../lib/libozblas.a
+# compiler family (GCC: g++, g++-16, aarch64-linux-gnu-g++, etc. / NVHPC: nvc++, pgc++)
+IS_GCC   := $(filter g++ g++-% %-g++ %-g++-%,$(notdir $(CXX)))
+IS_NVHPC := $(filter nvc++ nvc++-% pgc++,$(notdir $(CXX)))
 ifneq ($(CXX),FCC)
-FLAGS	:= -Wall -Wno-maybe-uninitialized 
+FLAGS	:= -Wall
+endif
+ifneq ($(IS_GCC),)
+FLAGS	+= -Wno-maybe-uninitialized
 endif
 # INC_PATH may contain multiple directories separated by ':'
 FLAGS   += -MD -O3 -fPIC $(addprefix -I,$(subst :, ,$(INC_PATH))) 
@@ -26,8 +32,10 @@ endif
 endif
 	# Warning 1: fprotect-parens MUST be used (g++ enables it in default)
 	# Warning 2: fp-model source MUST be used (disable 80-bit register)
-# GCC: g++, g++-16, aarch64-linux-gnu-g++, etc.
-ifneq ($(filter g++ g++-% %-g++ %-g++-%,$(notdir $(CXX))),)
+ifneq ($(IS_NVHPC),)
+	FLAGS += -mp
+endif
+ifneq ($(IS_GCC),)
 	FLAGS += -fopenmp 
 ifeq ($(CPU_ARCH),SKYLAKE)
 	FLAGS += -march=skylake

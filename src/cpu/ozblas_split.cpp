@@ -87,7 +87,11 @@ TYPE ozblasSplitVecKernel (
     const TYPE one = (TYPE)1.;
 	const TYPE sigma = CONST * scalbn1 (one, rho + tau) * splitShift;
 	TYPE max_ = 0.;
-	#pragma omp parallel for reduction(max:max_)
+	// manual max-reduction: nvc++ fails (ICE) with reduction(max:) on binary128 long double
+	#pragma omp parallel
+	{
+	TYPE lmax_ = 0.;
+	#pragma omp for
 	for (int32_t i = 0; i < n; i++) {
 		TYPE input = devInput[i];
 		const TYPE split = (input + sigma) - sigma;
@@ -97,7 +101,10 @@ TYPE ozblasSplitVecKernel (
         //======
 		devSplit[i] = split;
 		devOutput[i] = input;
-		max_ = std::max(max_, fabs1(input));
+		lmax_ = std::max(lmax_, fabs1(input));
+	}
+	#pragma omp critical
+	max_ = std::max(max_, lmax_);
 	}
 	devMax[0] = max_;
     return max_;
@@ -118,7 +125,11 @@ TYPE1 ozblasSplitVecKernel (
     const TYPE1 one = (TYPE1)1.;
 	const TYPE1 sigma = CONST * scalbn1 (one, rho + tau) * splitShift;
 	TYPE1 max_ = 0.;
-	#pragma omp parallel for reduction(max:max_)
+	// manual max-reduction: nvc++ fails (ICE) with reduction(max:) on binary128 long double
+	#pragma omp parallel
+	{
+	TYPE1 lmax_ = 0.;
+	#pragma omp for
 	for (int32_t i = 0; i < n; i++) {
 		TYPE1 input = devInput[i];
 		const TYPE1 split = (input + sigma) - sigma;
@@ -128,7 +139,10 @@ TYPE1 ozblasSplitVecKernel (
         //======
 		devSplit[i] = scalbn1(split, -tau);
 		devOutput[i] = input;
-		max_ = std::max(max_, fabs1(input));
+		lmax_ = std::max(lmax_, fabs1(input));
+	}
+	#pragma omp critical
+	max_ = std::max(max_, lmax_);
 	}
 	devMax[0] = max_;
     return max_;

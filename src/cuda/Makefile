@@ -6,7 +6,11 @@ AR		= ar
 LIB		:= ../../lib/libcuozblas.a
 # INC_PATH may contain multiple directories separated by ':'
 INCS    := $(addprefix -I,$(subst :, ,$(INC_PATH)))
-FLAGS   := -Wall -MD -O3 -Wno-maybe-uninitialized $(INCS) 
+FLAGS   := -Wall -MD -O3 $(INCS)
+# -Wno-maybe-uninitialized is GCC-only (e.g., nvc++ rejects it)
+ifneq ($(filter g++ g++-% %-g++ %-g++-%,$(notdir $(CXX))),)
+FLAGS   += -Wno-maybe-uninitialized
+endif
 NVCCFLAGS   := -O3 --expt-relaxed-constexpr #--ptxas-options=-v
 #--ptxas-options=-v #--compiler-options='-finstrument-functions' -g
 

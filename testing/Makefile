@@ -183,6 +183,10 @@ ifeq ($(CPU_ARCH),SKYLAKE)
 	FLAGS += -xCORE-AVX2 -mtune=skylake-avx512 
 endif
 endif
+# NVHPC: nvc++, pgc++
+ifneq ($(filter nvc++ nvc++-% pgc++,$(notdir $(CXX))),)
+	FLAGS += -mp
+endif
 # GCC: g++, g++-16, aarch64-linux-gnu-g++, etc.
 ifneq ($(filter g++ g++-% %-g++ %-g++-%,$(notdir $(CXX))),)
 	FLAGS += -fopenmp 
