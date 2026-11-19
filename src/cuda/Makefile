@@ -104,5 +104,5 @@ cuozblas.o: cuozblas.cpp
 	$(CXX) $(FLAGS) -o $@ -c $< -I$(CUDA_PATH)/include $(INCS)
 
 clean :
-	$(RM) *.o *.d
+	$(RM) *.o *.d blas/*.o blas/*.d
 	$(RM) $(LIB)
