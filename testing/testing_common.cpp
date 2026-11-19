@@ -224,9 +224,13 @@ void dev_setting (testingHandle_t *th) {
 	th->cc = devprop.major * 100 + devprop.minor * 10;
 	th->Cores = get_num_sp_cores (th->cc);
 	th->DPCores = get_num_dp_cores (th->cc);
-	th->device_bytes_per_sec = (double)th->devprop.memoryClockRate * 2. * 1000. * (double)th->devprop.memoryBusWidth / 8.;
-	th->device_flops_per_sec_sp = (double)th->devprop.clockRate * 1000. * 2. * (double)th->devprop.multiProcessorCount * th->Cores;
-	th->device_flops_per_sec_dp = (double)th->devprop.clockRate * 1000. * 2. * (double)th->devprop.multiProcessorCount * th->DPCores;
+	// cudaDeviceProp::clockRate and memoryClockRate were removed in CUDA 13 -> use cudaDeviceGetAttribute (kHz)
+	int32_t clockRate = 0, memoryClockRate = 0;
+	cudaDeviceGetAttribute (&clockRate, cudaDevAttrClockRate, th->devno);
+	cudaDeviceGetAttribute (&memoryClockRate, cudaDevAttrMemoryClockRate, th->devno);
+	th->device_bytes_per_sec = (double)memoryClockRate * 2. * 1000. * (double)th->devprop.memoryBusWidth / 8.;
+	th->device_flops_per_sec_sp = (double)clockRate * 1000. * 2. * (double)th->devprop.multiProcessorCount * th->Cores;
+	th->device_flops_per_sec_dp = (double)clockRate * 1000. * 2. * (double)th->devprop.multiProcessorCount * th->DPCores;
 #endif
 }
 
