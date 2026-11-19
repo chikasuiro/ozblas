@@ -105,7 +105,8 @@ int32_t ozblasRgemm (
 	for (int32_t im = 0; im < ceil((float)m/mbk); im++) {
 		int32_t mbk_ = (m-mbk*im >= mbk) ? mbk : m-mbk*im;
 		// SplitA -----------------------------------
-		int32_t split3FlagA;
+		// Split3 is used if splitMode is 3 (rangeCheck is disabled below); must be initialized as it is used in Sum
+		int32_t split3FlagA = (oh->splitMode == 3) ? 1 : 0;
 		int32_t nSplitA;
 		t1 = timer();
 		if (checkTrans (transA) == 0) {
@@ -132,7 +133,8 @@ int32_t ozblasRgemm (
 		for (int32_t in = 0; in < ceil((float)n/nbk); in++) {
 			int32_t nbk_ = (n-nbk*in >= nbk) ? nbk : n-nbk*in;
 			// SplitB -----------------------------------
-			int32_t split3FlagB;
+			// Split3 is used if splitMode is 3 (rangeCheck is disabled below); must be initialized as it is used in Sum
+			int32_t split3FlagB = (oh->splitMode == 3) ? 1 : 0;
 			int32_t nSplitB;
 			t1 = timer();
 			if (checkTrans (transB) == 0) {
